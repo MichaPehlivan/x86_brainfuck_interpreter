@@ -15,7 +15,20 @@ _start:
     mov rdx, MAX_CODE_LEN
     syscall
 
+    ; initialize tape to 0's
+    mov r10, tape
+    mov r11, 30000
+initstart:
+    cmp r11, 0
+    je initend
+    mov byte [r10], 0
+    inc r10
+    dec r11
+initend:
+
     mov r9, bf_code ; current command pointer
+    mov r10, tape ; tape pointer
+    mov r12, loop_stack ; loop stack pointer
 
     ; brainfuck loop:
 loopstart:
@@ -38,28 +51,73 @@ loopstart:
     je bracket_close
     jmp loopend
 right:
+    inc r10 ; move pointer right
     inc r9
     jmp loopstart
 left:
+    dec r10 ; move pointer left
     inc r9
     jmp loopstart
 plus:
+    inc byte [r10] ; add 1 to value at pointer
     inc r9
     jmp loopstart
 minus:
+    dec byte [r10] ; subtract 1 from value at pointer
     inc r9
     jmp loopstart
 output:
+    ; output current value
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, r10
+    mov rdx, 1
+    syscall
+
     inc r9
     jmp loopstart
 input:
+    ; get input
+    mov rax, 0
+    mov rdi, 1
+    mov rsi, r10
+    mov rdx, 1
+    syscall
+
     inc r9
     jmp loopstart
 bracket_open:
+    cmp byte [r10], 0
+    je skip_loop
+    push r9
+
     inc r9
     jmp loopstart
-bracket_close:
+skip_loop:
+    cmp byte [r9], BRACKET_OPEN
+    je open_found
+    cmp byte [r9], BRACKET_CLOSE
+    je close_found
     inc r9
+    cmp r13, r14
+    je loopstart
+open_found:
+    inc r13
+    inc r9
+    jmp skip_loop
+close_found:
+    inc r14
+    inc r9
+    jmp skip_loop
+bracket_close:
+    cmp byte [r10], 0
+    jne jump_back
+    pop rax
+
+    inc r9
+    jmp loopstart
+jump_back:
+    pop r9
     jmp loopstart
 loopend:
 
@@ -73,7 +131,7 @@ section .data
     SYS_EXIT equ 60
     SUCCES equ 0
     INPUT_MSG_LEN equ 22
-    MAX_CODE_LEN equ 1000
+    MAX_CODE_LEN equ 10000
 
     ; brainfuck commands
     RIGHT equ 62
@@ -87,8 +145,9 @@ section .data
 
     ; constants
     input_msg db "Input brainfuck code: "
+    newline db 10
 
 section .bss
-    bf_code resb 1000
-
-
+    bf_code resb 10000
+    tape resb 30000
+    loop_stack resq 1000
