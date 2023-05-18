@@ -28,7 +28,6 @@ initend:
 
     mov r9, bf_code ; current command pointer
     mov r10, tape ; tape pointer
-    mov r12, loop_stack ; loop stack pointer
 
     ; brainfuck loop:
 loopstart:
@@ -102,11 +101,11 @@ skip_loop:
     cmp r13, r14
     je loopstart
 open_found:
-    inc r13
+    inc r13 ; open bracket counter
     inc r9
     jmp skip_loop
 close_found:
-    inc r14
+    inc r14 ; close bracket counter
     inc r9
     jmp skip_loop
 bracket_close:
@@ -150,4 +149,3 @@ section .data
 section .bss
     bf_code resb 10000
     tape resb 30000
-    loop_stack resq 1000
